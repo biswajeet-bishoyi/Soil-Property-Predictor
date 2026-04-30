@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Soil Property Predictor — Geotechnical Intelligence</title>
+    <meta name="description" content="Predict soil engineering properties like shear strength, bearing capacity, and permeability using an AI-powered neural network. Built for geotechnical engineers.">
+    <meta name="keywords" content="soil property predictor, geotechnical engineering, shear strength, bearing capacity, permeability, AI, machine learning">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- App CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="bg-animation" id="bgAnimation">
+        <canvas id="bgCanvas"></canvas>
+    </div>
+
+    <!-- Loading Overlay (shown during model training) -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="neural-loader">
+                <div class="node n1"></div>
+                <div class="node n2"></div>
+                <div class="node n3"></div>
+                <div class="node n4"></div>
+                <div class="node n5"></div>
+                <div class="connection c1"></div>
+                <div class="connection c2"></div>
+                <div class="connection c3"></div>
+                <div class="connection c4"></div>
+            </div>
+            <h2 class="loading-title">Training Neural Network</h2>
+            <p class="loading-subtitle" id="loadingStatus">Generating synthetic soil data...</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p class="loading-epoch" id="loadingEpoch">Epoch 0 / 100</p>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+
+        <!-- Hero Section -->
+        <header class="hero" id="hero">
+            <div class="hero-badge">
+                <span class="badge-dot"></span>
+                <span>AI-Powered Geotechnical Analysis</span>
+            </div>
+            <h1 class="hero-title">
+                Soil Property<br>
+                <span class="gradient-text">Predictor</span>
+            </h1>
+            <p class="hero-subtitle">
+                Predict shear strength, bearing capacity, permeability, and more using a neural network trained on established geotechnical correlations.
+            </p>
+            <div class="hero-stats">
+                <div class="stat">
+                    <span class="stat-value" id="statSamples">2,000</span>
+                    <span class="stat-label">Training Samples</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                    <span class="stat-value">6</span>
+                    <span class="stat-label">Properties Predicted</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                    <span class="stat-value" id="statAccuracy">—</span>
+                    <span class="stat-label">Model Loss</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Input Section -->
+        <section class="input-section" id="inputSection">
+            <div class="section-header">
+                <h2 class="section-title">Input Parameters</h2>
+                <p class="section-desc">Configure the soil properties and site conditions below</p>
+            </div>
+
+            <form id="predictionForm" class="input-grid">
+                <!-- Soil Type -->
+                <div class="input-card" id="inputSoilType">
+                    <label class="input-label">
+                        <span class="label-icon">🏔️</span>
+                        Soil Type
+                    </label>
+                    <select id="soilType" class="input-select" required>
+                        <option value="0">Clay</option>
+                        <option value="1">Silt</option>
+                        <option value="2" selected>Sand</option>
+                        <option value="3">Gravel</option>
+                    </select>
+                    <span class="input-hint">Primary soil classification</span>
+                </div>
+
+                <!-- SPT N-Value -->
+                <div class="input-card" id="inputSPT">
+                    <label class="input-label">
+                        <span class="label-icon">🔨</span>
+                        SPT N-Value
+                    </label>
+                    <div class="slider-group">
+                        <input type="range" id="sptSlider" class="input-range" min="1" max="60" value="20" step="1">
+                        <input type="number" id="sptValue" class="input-number" min="1" max="60" value="20" step="1">
+                    </div>
+                    <span class="input-hint">blows / 30 cm</span>
+                </div>
+
+                <!-- Moisture Content -->
+                <div class="input-card" id="inputMoisture">
+                    <label class="input-label">
+                        <span class="label-icon">💧</span>
+                        Moisture Content
+                    </label>
+                    <div class="slider-group">
+                        <input type="range" id="moistureSlider" class="input-range" min="1" max="80" value="25" step="1">
+                        <input type="number" id="moistureValue" class="input-number" min="1" max="80" value="25" step="1">
+                    </div>
+                    <span class="input-hint">%</span>
+                </div>
+
+                <!-- Liquid Limit -->
+                <div class="input-card" id="inputLL">
+                    <label class="input-label">
+                        <span class="label-icon">🌊</span>
+                        Liquid Limit
+                    </label>
+                    <div class="slider-group">
+                        <input type="range" id="llSlider" class="input-range" min="10" max="100" value="40" step="1">
+                        <input type="number" id="llValue" class="input-number" min="10" max="100" value="40" step="1">
+                    </div>
+                    <span class="input-hint">%</span>
+                </div>
+
+                <!-- Plastic Limit -->
+                <div class="input-card" id="inputPL">
+                    <label class="input-label">
+                        <span class="label-icon">🧱</span>
+                        Plastic Limit
+                    </label>
+                    <div class="slider-group">
+                        <input type="range" id="plSlider" class="input-range" min="5" max="60" value="20" step="1">
+                        <input type="number" id="plValue" class="input-number" min="5" max="60" value="20" step="1">
+                    </div>
+                    <span class="input-hint">%</span>
+                </div>
+
+                <!-- Dry Density -->
+                <div class="input-card" id="inputDensity">
+                    <label class="input-label">
+                        <span class="label-icon">⚖️</span>
+                        Dry Density
+                    </label>
+                    <div class="slider-group">
+                        <input type="range" id="densitySlider" class="input-range" min="10" max="22" value="17" step="0.1">
+                        <input type="number" id="densityValue" class="input-number" min="10" max="22" value="17" step="0.1">
+                    </div>
+                    <span class="input-hint">kN/m³</span>
+                </div>
+
+                <!-- Void Ratio -->
+                <div class="input-card" id="inputVoid">
+                    <label class="input-label">
+                        <span class="label-icon">🫧</span>
+                        Void Ratio
+                    </label>
+                    <div class="slider-group">
+                        <input type="range" id="voidSlider" class="input-range" min="0.2" max="2.0" value="0.65" step="0.01">
+                        <input type="number" id="voidValue" class="input-number" min="0.2" max="2.0" value="0.65" step="0.01">
+                    </div>
+                    <span class="input-hint">e</span>
+                </div>
+
+                <!-- Grain Size D10 -->
+                <div class="input-card" id="inputD10">
+                    <label class="input-label">
+                        <span class="label-icon">🔬</span>
+                        Grain Size D₁₀
+                    </label>
+                    <div class="slider-group">
+                        <input type="range" id="d10Slider" class="input-range" min="0.001" max="5" value="0.15" step="0.001">
+                        <input type="number" id="d10Value" class="input-number" min="0.001" max="5" value="0.15" step="0.001">
+                    </div>
+                    <span class="input-hint">mm</span>
+                </div>
+
+                <!-- Depth -->
+                <div class="input-card" id="inputDepth">
+                    <label class="input-label">
+                        <span class="label-icon">📏</span>
+                        Depth
+                    </label>
+                    <div class="slider-group">
+                        <input type="range" id="depthSlider" class="input-range" min="0.5" max="30" value="5" step="0.5">
+                        <input type="number" id="depthValue" class="input-number" min="0.5" max="30" value="5" step="0.5">
+                    </div>
+                    <span class="input-hint">m</span>
+                </div>
+
+                <!-- Foundation Width -->
+                <div class="input-card" id="inputWidth">
+                    <label class="input-label">
+                        <span class="label-icon">📐</span>
+                        Foundation Width
+                    </label>
+                    <div class="slider-group">
+                        <input type="range" id="widthSlider" class="input-range" min="0.5" max="10" value="2" step="0.1">
+                        <input type="number" id="widthValue" class="input-number" min="0.5" max="10" value="2" step="0.1">
+                    </div>
+                    <span class="input-hint">m</span>
+                </div>
+            </form>
+
+            <!-- Predict Button -->
+            <div class="predict-wrapper">
+                <button type="button" id="predictBtn" class="predict-btn" disabled>
+                    <span class="btn-icon">🧠</span>
+                    <span class="btn-text">Predict Soil Properties</span>
+                    <span class="btn-loading" id="btnLoading">
+                        <span class="spinner"></span>
+                        Analyzing...
+                    </span>
+                </button>
+                <p class="predict-hint" id="predictHint">Model is training... please wait</p>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section class="results-section hidden" id="resultsSection">
+            <div class="section-header">
+                <h2 class="section-title">Prediction Results</h2>
+                <p class="section-desc">AI-predicted soil engineering properties</p>
+            </div>
+
+            <!-- Result Cards -->
+            <div class="results-grid" id="resultsGrid">
+                <!-- Shear Strength -->
+                <div class="result-card" id="resultShear" data-property="shear">
+                    <div class="result-icon">⚡</div>
+                    <div class="result-info">
+                        <span class="result-label">Shear Strength</span>
+                        <span class="result-value" id="valShear">—</span>
+                        <span class="result-unit">kPa</span>
+                    </div>
+                    <div class="result-bar">
+                        <div class="result-bar-fill" id="barShear"></div>
+                    </div>
+                    <span class="result-range" id="rangeShear">Typical: 10–300 kPa</span>
+                </div>
+
+                <!-- Bearing Capacity -->
+                <div class="result-card" id="resultBearing" data-property="bearing">
+                    <div class="result-icon">🏗️</div>
+                    <div class="result-info">
+                        <span class="result-label">Bearing Capacity</span>
+                        <span class="result-value" id="valBearing">—</span>
+                        <span class="result-unit">kPa</span>
+                    </div>
+                    <div class="result-bar">
+                        <div class="result-bar-fill" id="barBearing"></div>
+                    </div>
+                    <span class="result-range" id="rangeBearing">Typical: 50–600 kPa</span>
+                </div>
+
+                <!-- Permeability -->
+                <div class="result-card" id="resultPerm" data-property="perm">
+                    <div class="result-icon">🌀</div>
+                    <div class="result-info">
+                        <span class="result-label">Permeability</span>
+                        <span class="result-value" id="valPerm">—</span>
+                        <span class="result-unit">m/s</span>
+                    </div>
+                    <div class="result-bar">
+                        <div class="result-bar-fill" id="barPerm"></div>
+                    </div>
+                    <span class="result-range" id="rangePerm">Typical: 10⁻¹⁰ – 10⁻² m/s</span>
+                </div>
+
+                <!-- Friction Angle -->
+                <div class="result-card" id="resultFriction" data-property="friction">
+                    <div class="result-icon">📐</div>
+                    <div class="result-info">
+                        <span class="result-label">Friction Angle</span>
+                        <span class="result-value" id="valFriction">—</span>
+                        <span class="result-unit">°</span>
+                    </div>
+                    <div class="result-bar">
+                        <div class="result-bar-fill" id="barFriction"></div>
+                    </div>
+                    <span class="result-range" id="rangeFriction">Typical: 0–45°</span>
+                </div>
+
+                <!-- Cohesion -->
+                <div class="result-card" id="resultCohesion" data-property="cohesion">
+                    <div class="result-icon">🔗</div>
+                    <div class="result-info">
+                        <span class="result-label">Cohesion</span>
+                        <span class="result-value" id="valCohesion">—</span>
+                        <span class="result-unit">kPa</span>
+                    </div>
+                    <div class="result-bar">
+                        <div class="result-bar-fill" id="barCohesion"></div>
+                    </div>
+                    <span class="result-range" id="rangeCohesion">Typical: 0–200 kPa</span>
+                </div>
+
+                <!-- Compression Index -->
+                <div class="result-card" id="resultCc" data-property="cc">
+                    <div class="result-icon">📉</div>
+                    <div class="result-info">
+                        <span class="result-label">Compression Index</span>
+                        <span class="result-value" id="valCc">—</span>
+                        <span class="result-unit">Cc</span>
+                    </div>
+                    <div class="result-bar">
+                        <div class="result-bar-fill" id="barCc"></div>
+                    </div>
+                    <span class="result-range" id="rangeCc">Typical: 0.01–0.80</span>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="charts-grid">
+                <div class="chart-card" id="radarChartCard">
+                    <h3 class="chart-title">Soil Property Profile</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="radarChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card" id="barChartCard">
+                    <h3 class="chart-title">Predicted vs Typical Range</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="barChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Soil Classification -->
+            <div class="classification-card" id="classificationCard">
+                <h3 class="chart-title">Soil Classification Summary</h3>
+                <div class="classification-grid">
+                    <div class="class-item">
+                        <span class="class-label">Soil Group</span>
+                        <span class="class-value" id="classGroup">—</span>
+                    </div>
+                    <div class="class-item">
+                        <span class="class-label">Plasticity Index</span>
+                        <span class="class-value" id="classPI">—</span>
+                    </div>
+                    <div class="class-item">
+                        <span class="class-label">Liquidity Index</span>
+                        <span class="class-value" id="classLI">—</span>
+                    </div>
+                    <div class="class-item">
+                        <span class="class-label">Activity</span>
+                        <span class="class-value" id="classActivity">—</span>
+                    </div>
+                    <div class="class-item">
+                        <span class="class-label">Consistency</span>
+                        <span class="class-value" id="classConsistency">—</span>
+                    </div>
+                    <div class="class-item">
+                        <span class="class-label">Relative Density</span>
+                        <span class="class-value" id="classDensity">—</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Foundation Recommendation -->
+            <div class="foundation-rec" id="foundationRec">
+                <div class="section-header" style="margin-top:36px;">
+                    <h2 class="section-title">Foundation Recommendation</h2>
+                    <p class="section-desc">AI-suggested foundation type based on predicted soil strength</p>
+                </div>
+                <div class="rec-card" id="recCard">
+                    <div class="rec-visual" id="recVisual">
+                        <div class="rec-icon-large" id="recIcon">🏗️</div>
+                        <div class="rec-strength-meter">
+                            <div class="meter-label">Soil Strength</div>
+                            <div class="meter-bar-bg">
+                                <div class="meter-bar-fill" id="strengthMeter"></div>
+                                <div class="meter-marker" id="strengthMarker"></div>
+                            </div>
+                            <div class="meter-labels-row">
+                                <span>Weak</span><span>Moderate</span><span>Strong</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="rec-details">
+                        <h3 class="rec-type" id="recType">—</h3>
+                        <p class="rec-desc" id="recDesc">Run a prediction to see the recommendation.</p>
+                        <div class="rec-specs" id="recSpecs">
+                            <div class="rec-spec">
+                                <span class="rec-spec-label">Shear Strength</span>
+                                <span class="rec-spec-value" id="recShear">—</span>
+                            </div>
+                            <div class="rec-spec">
+                                <span class="rec-spec-label">Bearing Capacity</span>
+                                <span class="rec-spec-value" id="recBearing">—</span>
+                            </div>
+                            <div class="rec-spec">
+                                <span class="rec-spec-label">Safety Factor</span>
+                                <span class="rec-spec-value" id="recSafety">—</span>
+                            </div>
+                            <div class="rec-spec">
+                                <span class="rec-spec-label">Max Depth</span>
+                                <span class="rec-spec-value" id="recDepth">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settlement Simulation -->
+            <div class="settlement-section" id="settlementSection">
+                <div class="section-header" style="margin-top:36px;">
+                    <h2 class="section-title">Soil Settlement Simulation</h2>
+                    <p class="section-desc">Estimated settlement under increasing applied load</p>
+                </div>
+                <div class="chart-card">
+                    <div class="settlement-controls">
+                        <label class="input-label" style="margin-bottom:0;">
+                            <span class="label-icon">🏋️</span>
+                            Max Applied Load (kPa)
+                        </label>
+                        <div class="slider-group" style="max-width:300px;">
+                            <input type="range" id="loadSlider" class="input-range" min="50" max="500" value="200" step="10">
+                            <input type="number" id="loadValue" class="input-number" min="50" max="500" value="200" step="10">
+                        </div>
+                    </div>
+                    <div class="chart-wrapper" style="max-height:400px;">
+                        <canvas id="settlementChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Data Analytics Dashboard -->
+        <section class="analytics-section hidden" id="analyticsSection">
+            <div class="section-header">
+                <h2 class="section-title">Data Analytics Dashboard</h2>
+                <p class="section-desc">Model performance metrics and prediction insights</p>
+            </div>
+
+            <!-- Metrics Cards -->
+            <div class="metrics-grid">
+                <div class="metric-card metric-r2" id="metricR2">
+                    <div class="metric-ring">
+                        <svg viewBox="0 0 120 120" class="ring-svg">
+                            <circle cx="60" cy="60" r="52" class="ring-bg"/>
+                            <circle cx="60" cy="60" r="52" class="ring-fill" id="ringR2"/>
+                        </svg>
+                        <span class="ring-value" id="metricR2Val">—</span>
+                    </div>
+                    <span class="metric-label">R² Score</span>
+                    <span class="metric-desc">Prediction Accuracy</span>
+                </div>
+                <div class="metric-card metric-mae" id="metricMAE">
+                    <div class="metric-big-val" id="metricMAEVal">—</div>
+                    <span class="metric-label">MAE</span>
+                    <span class="metric-desc">Mean Absolute Error</span>
+                </div>
+                <div class="metric-card metric-mse" id="metricMSE">
+                    <div class="metric-big-val" id="metricMSEVal">—</div>
+                    <span class="metric-label">MSE</span>
+                    <span class="metric-desc">Mean Squared Error</span>
+                </div>
+                <div class="metric-card metric-rmse" id="metricRMSE">
+                    <div class="metric-big-val" id="metricRMSEVal">—</div>
+                    <span class="metric-label">RMSE</span>
+                    <span class="metric-desc">Root Mean Squared Error</span>
+                </div>
+            </div>
+
+            <!-- Actual vs Predicted Chart -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3 class="chart-title">Actual vs Predicted — Shear Strength</h3>
+                    <div class="chart-wrapper" style="max-height:400px;">
+                        <canvas id="scatterChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">Training Loss Curve</h3>
+                    <div class="chart-wrapper" style="max-height:400px;">
+                        <canvas id="lossChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive Soil Simulation -->
+        <section class="simulation-section hidden" id="simulationSection">
+            <div class="section-header">
+                <h2 class="section-title">Interactive Soil Simulation</h2>
+                <p class="section-desc">Visualize foundation loading, stress distribution, and settlement in real-time</p>
+            </div>
+            <div class="sim-card">
+                <div class="sim-controls">
+                    <label class="input-label" style="margin-bottom:0;">
+                        <span class="label-icon">⬇️</span>
+                        Applied Load
+                    </label>
+                    <div class="slider-group" style="max-width:300px;">
+                        <input type="range" id="simLoadSlider" class="input-range" min="0" max="100" value="0" step="1">
+                        <span class="sim-load-label" id="simLoadLabel">0%</span>
+                    </div>
+                    <div class="sim-legend">
+                        <span class="sim-legend-item"><span class="sim-dot" style="background:rgba(255,80,60,0.6)"></span>Stress Bulb</span>
+                        <span class="sim-legend-item"><span class="sim-dot" style="background:rgba(80,180,255,0.6)"></span>Water Table</span>
+                        <span class="sim-legend-item"><span class="sim-dot" style="background:#00d4aa"></span>Settlement</span>
+                    </div>
+                </div>
+                <div class="sim-canvas-wrap">
+                    <canvas id="simCanvas"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- How It Works -->
+        <section class="info-section" id="infoSection">
+            <div class="info-card">
+                <button class="info-toggle" id="infoToggle">
+                    <h3>How It Works</h3>
+                    <span class="toggle-icon">▼</span>
+                </button>
+                <div class="info-body" id="infoBody">
+                    <div class="info-steps">
+                        <div class="info-step">
+                            <div class="step-number">01</div>
+                            <div class="step-content">
+                                <h4>Synthetic Data Generation</h4>
+                                <p>2,000 training samples are generated using established geotechnical empirical correlations from Terzaghi, Meyerhof, Hazen, Wolff, and others. Gaussian noise is added for realism.</p>
+                            </div>
+                        </div>
+                        <div class="info-step">
+                            <div class="step-number">02</div>
+                            <div class="step-content">
+                                <h4>Neural Network Training</h4>
+                                <p>A TensorFlow.js neural network with 2 hidden layers (64 and 32 neurons, ReLU activation) is trained directly in your browser for ~100 epochs.</p>
+                            </div>
+                        </div>
+                        <div class="info-step">
+                            <div class="step-number">03</div>
+                            <div class="step-content">
+                                <h4>Instant Prediction</h4>
+                                <p>Your input parameters are normalized and fed through the trained model. The network captures non-linear interactions between soil properties for nuanced predictions.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="info-disclaimer">
+                        <span class="disclaimer-icon">⚠️</span>
+                        <p><strong>Disclaimer:</strong> This tool uses a neural network trained on synthetic data from empirical correlations. It is intended for educational and preliminary assessment purposes only. Results should not replace proper site investigation and laboratory testing for final engineering design.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>AI Soil Property Predictor — Built with TensorFlow.js & Chart.js</p>
+            <p class="footer-sub">For educational & preliminary assessment purposes only</p>
+        </footer>
+    </div>
+
+    <!-- App Scripts -->
+    <script src="js/model.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/simulation.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
